@@ -33,7 +33,7 @@ double-clicking `index.html`, so the scripts load correctly.
 **Authors, links and citation** live in the `CONFIG` object at the top of `assets/main.js`:
 
 - `authors` / `affiliations`: names, homepage links and affiliation numbers
-- `links.paper`, `links.arxiv`, `links.code`, `links.huggingface`: an empty link shows as a dimmed "soon" button
+- `links.arxiv`, `links.code`, `links.huggingface`: an empty link shows as a dimmed "soon" button
 - `bibtex`: key, authors, venue and year
 
 **Text** is in `index.html`. After changing a CSS or JS file, bump the `?v=` number on its
