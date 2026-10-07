@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PreciseCoder</title>
+  <meta name="description" content="PreciseCoder: Rewards Beyond Test Passing — Towards Generalizable Fidelity in LLM Debugging." />
+  <meta property="og:title" content="PreciseCoder: Rewards Beyond Test Passing" />
+  <meta property="og:description" content="RL from unit tests teaches code models to over-edit and hallucinate bugs. PreciseCoder rewards semantically verified, localized edits — cutting edits from 13+ lines to 3 at the same pass rate." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231b1a17'/%3E%3Crect x='6' y='9' width='20' height='3' rx='1' fill='%23e36b5b'/%3E%3Crect x='6' y='15' width='20' height='3' rx='1' fill='%234fb477'/%3E%3Crect x='6' y='21' width='12' height='3' rx='1' fill='%23847f73'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="assets/style.css?v=202610070200" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>PreciseCoder</a>
+  <nav>
+    <a href="#problem">Problem</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#generalization">Generalization</a>
+    <a href="#thinking">Thinking</a>
+    <a href="#bibtex">Cite</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============================ HERO ============================ -->
+<section class="hero">
+  <p class="eyebrow mono">@@ diff --reward unit_test → unit_test + F<sub>1</sub> @@</p>
+  <h1>
+    <span class="h1-kicker">PreciseCoder</span>
+    Rewards Beyond Test Passing: Towards<br class="title-break" /> Generalizable Fidelity in LLM Debugging
+  </h1>
+
+  <!-- Authors & affiliations are filled from assets/main.js → CONFIG -->
+  <div class="authors" id="authors"></div>
+  <div class="affils" id="affils"></div>
+
+  <div class="links" id="links"></div>
+
+  <p class="lede">
+    Reinforcement learning from unit tests only asks whether the final program passes.
+    It raises pass rates — and quietly teaches models to <mark class="del">edit more</mark>
+    and to <mark class="del">hallucinate bugs</mark> in code that is already correct.
+    <strong class="brand-name">PreciseCoder</strong> adds a reward for <mark class="ins">semantically verified, localized edits</mark>.
+  </p>
+
+  <ul class="stats" aria-label="Headline results">
+    <li><b class="num"><s>13.8</s>&rarr;3.0</b><span>edited lines per task on Qwen3.5-4B, at the same pass rate as unit-test-only GRPO</span></li>
+    <li><b class="num">+24–29</b><span>points of edit precision over the base models (4B, 9B, 27B)</span></li>
+    <li><b class="num">47–52%</b><span>no-op rate on correct code, vs. 19–31% after unit-test-only GRPO</span></li>
+    <li><b class="num">+4.6</b><span>precision points for GPT-5.6 Sol when handed a 9B PreciseCoder reasoning trace</span></li>
+  </ul>
+</section>
+
+<!-- ============================ DEMO (Fig 1a) ============================ -->
+<section class="demo" id="problem" aria-labelledby="demo-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 01 @@</span>
+    <h2 id="demo-title">Two failure modes a unit test can't see</h2>
+    <p>Toggle between the two cases. A unit-test reward scores the program the model returns — not the edit that produced it.</p>
+  </div>
+
+  <div class="demo-tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-case="overedit">Over-editing</button>
+    <button role="tab" aria-selected="false" data-case="halluc">Bug hallucination</button>
+  </div>
+
+  <div class="diff-stage">
+    <figure class="pane">
+      <figcaption class="pane-head mono"><span class="dot"></span><span id="in-label">input · buggy program</span></figcaption>
+      <pre class="code" id="code-in"></pre>
+    </figure>
+
+    <div class="arrow" aria-hidden="true">
+      <span class="mono">LLM</span>
+      <svg viewBox="0 0 40 16"><path d="M0 8h36M29 2l7 6-7 6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+    </div>
+
+    <figure class="pane">
+      <figcaption class="pane-head mono">
+        <span class="dot"></span>
+        <span class="switch" role="radiogroup" aria-label="Model">
+          <button role="radio" aria-checked="true" data-model="grpo">unit-test GRPO</button>
+          <button role="radio" aria-checked="false" data-model="pc">PreciseCoder</button>
+        </span>
+      </figcaption>
+      <pre class="code" id="code-out"></pre>
+    </figure>
+  </div>
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+  <p class="fig-note">Illustrative examples adapted from Figure 1(a) of the paper.</p>
+</section>
+
+<!-- ============================ DIAGNOSIS ============================ -->
+<section class="prose-sec" aria-labelledby="diag-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 02 @@</span>
+    <h2 id="diag-title">Diagnosis: the unit-test reward teaches over-editing</h2>
+  </div>
+  <div class="stack">
+    <div class="prose">
+      <p>
+        We train Qwen3.5-4B with GRPO on <a class="ext" href="https://precise-debugging-benchmark.github.io" target="_blank" rel="noopener">PDB</a> debugging tasks using only the unit-test reward and watch the rollouts.
+        Early on, edit size tracks pass rate. Once the pass rate plateaus, the reward keeps encouraging larger edits:
+        the mean edit on passing rollouts grows from <b>3.94 to 8.28 lines</b>.
+      </p>
+      <p>
+        Training never shows the model a correct program — yet on 200 held-out bug-free programs the
+        no-op rate falls from <b>30.8% to 20.5%</b>. The model learns to “fix” code that isn't broken.
+      </p>
+      <p class="aside">
+        Even frontier models over-edit: on <a class="ext" href="https://precise-debugging-benchmark.github.io" target="_blank" rel="noopener">PDB</a>, GPT-5.1-Codex passes 76% of tasks, yet only 40% of the lines it edits are necessary.
+      </p>
+    </div>
+    <figure class="fig chart">
+      <div class="chart-body" data-chart="training"></div>
+      <figcaption><b>Training dynamics on Qwen3.5-4B.</b> Same pass rate (left), but unit-test-only GRPO edits more lines (middle) and leaves fewer bug-free programs untouched (right).</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================ METHOD ============================ -->
+<section class="method" id="method" aria-labelledby="method-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 03 @@</span>
+    <h2 id="method-title">Method: reward the edit, not just the program</h2>
+    <p>Edit size alone barely tracks correctness, so penalizing it trades pass rate for smaller patches. PreciseCoder instead scores each edit <em>fault by fault</em>.</p>
+  </div>
+
+  <ol class="steps">
+    <li>
+      <span class="step-n mono">1</span>
+      <h3>Verify each edit semantically</h3>
+      <p>Each predicted edit block <span class="tex">\hat\delta_i</span> is aligned to a reference fix <span class="tex">\delta^\star_i</span>. Fault <span class="tex">i</span> counts as fixed iff swapping the model's block into the reference repair still passes the tests.</p>
+      <div class="eq"><div class="tex-block">\mathrm{rec}=\frac{1}{m}\sum_i \mathrm{fix}_i</div><div class="tex-block">\mathrm{prec}=\frac{1}{\ell}\sum_i \mathrm{fix}_i\,\min\!\big(|\mathrm{ess}_i|,\,|\delta^\star_i|+\epsilon\big)</div></div>
+      <p class="small">Recall asks <em>which faults were repaired</em>; precision asks <em>what fraction of edited lines were needed</em>.</p>
+    </li>
+    <li>
+      <span class="step-n mono">2</span>
+      <h3>Gate recall, combine into F<sub>1</sub></h3>
+      <p>A passing program has resolved every injected fault by definition, so recall is set to 1 when tests pass. F<sub>1</sub> of precision and gated recall correlates with <em>both</em> passing and, among passing programs, with smaller edits.</p>
+      <div class="eq"><div class="tex-block">\widetilde{\mathrm{rec}}=\begin{cases}1 & \mathrm{unit}=1\\ \mathrm{rec} & \text{otherwise}\end{cases}</div><div class="tex-block">F_1=\mathrm{HM}\big(\mathrm{prec},\,\widetilde{\mathrm{rec}}\big)</div></div>
+    </li>
+    <li>
+      <span class="step-n mono">3</span>
+      <h3>Normalize each term separately</h3>
+      <p>Train with GDPO, which standardizes each reward term within the group before mixing, so a passing repair keeps a larger advantage than a failing one whenever <span class="tex">\lambda &lt; 0.37</span> at <span class="tex">G=6</span>.</p>
+      <div class="eq"><div class="tex-block">r_\lambda=(1-\lambda)\,\mathrm{unit}+\lambda\,F_1</div><div class="tex-block">\lambda=\tfrac{1}{3}</div></div>
+    </li>
+  </ol>
+
+  <figure class="fig chart wide side corr-fig">
+    <div class="chart-body" data-chart="rewardterms"></div>
+    <figcaption>
+      <h3>Why F<sub>1</sub>? Two tests for a reward term</h3>
+      <p>Each candidate term is scored by its correlation with passing (<em>stability</em>, x-axis) and, among passing samples, with smaller edits (<em>fidelity</em>, y-axis).</p>
+      <p>Edit size (−ℓ) fails the first; the unit test, constant once passing, fails the second. Precision tracks smaller edits, recall tracks passing, and only F<sub>1</sub> lands in the desired corner.</p>
+      <p class="small">Pearson r averaged over all training tasks (circle 4B, square 9B; 16 samples per task). The unit test is plotted at y = 0.</p>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ============================ RESULTS ============================ -->
+<section class="results" id="results" aria-labelledby="results-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 04 @@</span>
+    <h2 id="results-title">Results: precision without giving up pass rate</h2>
+    <p>Trained on 5,274 synthetic single-line bugs (BigCodeBench + LiveCodeBench via <a class="ext" href="https://precise-debugging-benchmark.github.io" target="_blank" rel="noopener">PDB</a>), tested on 1,205 held-out PDB-Single tasks and 1,512 already-correct programs (GT Debug).</p>
+  </div>
+
+  <div class="table-tabs" role="tablist" id="res-tabs"></div>
+  <div class="table-wrap">
+    <table class="res" id="res-table">
+      <thead>
+        <tr class="grp"><th></th><th colspan="4">PDB Test (buggy code)</th><th colspan="2">GT Debug (correct code)</th></tr>
+        <tr>
+          <th scope="col">Method</th>
+          <th scope="col">Pass&nbsp;%&thinsp;↑</th><th scope="col">Precision&nbsp;%&thinsp;↑</th><th scope="col">Recall&nbsp;%&thinsp;↑</th><th scope="col">Lines&thinsp;↓</th>
+          <th scope="col">No-op&nbsp;%&thinsp;↑</th><th scope="col">Damage&nbsp;%&thinsp;↓</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="small">PreciseCoder rows are mean ± std over 3 runs. Bold marks the best value within each block.</p>
+
+  <div class="callouts">
+    <div class="callout">
+      <h3>Edit-size penalties cost pass rate</h3>
+      <p>RECAP and EA-GRPO cut edits on Qwen3.5-4B from 13.8 to ≤3.7 lines, but pass rate drops from 55.1% to 38.1% and 53.3%. PreciseCoder reaches 3.0 lines at 55.3%.</p>
+    </div>
+    <div class="callout">
+      <h3>27B is competitive with frontier models</h3>
+      <p>PreciseCoder-27B beats DeepSeek-V4.1-Flash and Qwen3.8-Flash-Next on every measure. GPT-5.6 Sol passes more tasks, but its precision is 16.9 points lower.</p>
+    </div>
+    <div class="callout">
+      <h3>Restraint comes for free</h3>
+      <p>No training row contains correct code, yet the no-op rate on correct programs rises to 48–52%, and PreciseCoder breaks fewer of them than the base model.</p>
+    </div>
+  </div>
+
+  <div class="fig-row">
+    <figure class="fig chart">
+      <div class="chart-body" data-chart="frontier"></div>
+      <figcaption><b>Precision vs. pass rate on PDB Test</b> (bubble area = edited lines). Arrows join each base model to its PreciseCoder model.</figcaption>
+    </figure>
+    <figure class="fig chart">
+      <div class="chart-body" data-chart="restraint"></div>
+      <figcaption><b>Precision on buggy code and restraint on correct code rise together</b> (r = 0.90 across all 4B–27B models).</figcaption>
+    </figure>
+  </div>
+
+</section>
+
+<!-- ============================ GENERALIZATION ============================ -->
+<section class="gen" id="generalization" aria-labelledby="gen-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 05 @@</span>
+    <h2 id="gen-title">Trained on single-line bugs. Generalizes beyond them.</h2>
+    <p>Training only ever shows single-line faults in single-file programs, repaired in one shot.</p>
+  </div>
+
+  <div class="gen-grid">
+    <figure class="fig chart wide">
+      <div class="chart-body" data-chart="wild"></div>
+      <figcaption><b>Multi-line &amp; repository-level repair (PDB-Wild, 484 tasks).</b> Precision +20.3 / +16.7 / +14.8 points over base at 4B / 9B / 27B; mean edit shrinks by 51–71%.</figcaption>
+    </figure>
+    <figure class="fig chart wide">
+      <div class="chart-body" data-chart="swe"></div>
+      <figcaption><b>SWE-Bench Verified.</b> PreciseCoder-9B resolves 32.7% (base 25.9%, GRPO 28.1%, EA-GRPO 27.1%) with only +29% excess lines over gold; at 27B, 70.8% vs. 67.9%, and with the gold patch pre-applied it breaks fewer repos (8.9% vs. 11.0%, n = 150).</figcaption>
+    </figure>
+    <figure class="fig chart wide side">
+      <div class="chart-body" data-chart="agentic"></div>
+      <figcaption><b>Multi-turn agentic editing.</b> Trained with agentic RL in a five-turn editing agent, PreciseCoder-9B-Agent reaches 67.4% precision at a 56.3% pass rate — the best of every 9B model in agentic debugging on both.</figcaption>
+    </figure>
+  </div>
+
+  <div class="w2s">
+    <div class="w2s-text">
+      <h3>Weak-to-strong: precision travels through the reasoning trace</h3>
+      <p>
+        We prefill the think block of a 9B PreciseCoder model — token for token — into an untrained
+        <em>receiver</em>, which writes the repair. No weights, tokenizer or training are shared.
+        Five stronger receivers each gain <b>4.6–12.4 points</b> of edit precision while their pass rate moves by −1.5 to +4.3.
+      </p>
+      <p class="small">
+        Prefilled into its own base model, the trace recovers 73% of the training pass-rate gain and 60% of the precision gain.
+        As a control, an <em>untrained</em> 9B trace costs Qwen3.6-27B 7.4 points of pass rate.
+      </p>
+    </div>
+    <div class="w2s-chart" id="w2s-chart" role="img" aria-label="Change in edit precision and pass rate for each receiver model when given the PreciseCoder-9B trace"></div>
+  </div>
+</section>
+
+<!-- ============================ THINKING ============================ -->
+<section class="thinking" id="thinking" aria-labelledby="think-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 06 @@</span>
+    <h2 id="think-title">What changed in the thinking</h2>
+    <p>Either reward makes the model think longer. Only PreciseCoder changes what it says about a line.</p>
+  </div>
+
+  <div class="bigrams">
+    <div class="bigram-col">
+      <h3 class="mono">− unit-test GRPO</h3>
+      <ul><li>“let's check”</li><li>“only fix”</li><li>“make minimal”</li></ul>
+      <p class="small">Restates the instruction to fix. Argues from the prompt that a bug must exist (0.59 / 1k words).</p>
+    </div>
+    <div class="bigram-col plus">
+      <h3 class="mono">+ PreciseCoder</h3>
+      <ul><li>“might be”</li><li>“is valid”</li><li>“keep the”</li></ul>
+      <p class="small">Weighs whether a line is worth keeping. Hedges more (10.8 vs 6.5 / 1k) and almost never assumes a bug must exist (0.04 / 1k).</p>
+    </div>
+  </div>
+
+  <div class="fig-row">
+    <figure class="fig chart">
+      <div class="chart-body" data-chart="quote"></div>
+      <figcaption><b>Naming the buggy line.</b> The share of tasks whose thinking quotes every buggy line rises from 36% → 67% (4B) and 43% → 71% (9B); recall is 4–19% higher when it does.</figcaption>
+    </figure>
+    <figure class="fig chart">
+      <div class="chart-body" data-chart="hypotheses"></div>
+      <figcaption><b>More hypotheses, more restraint.</b> On correct code, PreciseCoder-9B proposes 27.6 bug hypotheses / 1k words (base 4.7, GRPO 10.8) — and, finding none it trusts, returns the code unchanged.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================ TAKEAWAY ============================ -->
+<section class="takeaway" aria-label="Takeaway">
+  <blockquote>
+    The reward credits an action only when it is checked against a reference and verified to do the work the reference requires — so a correct but unnecessary action earns nothing.
+  </blockquote>
+</section>
+
+<!-- ============================ BIBTEX ============================ -->
+<section class="bib" id="bibtex" aria-labelledby="bib-title">
+  <div class="sec-head">
+    <span class="hunk mono">@@ 07 @@</span>
+    <h2 id="bib-title">Citation</h2>
+  </div>
+  <div class="bib-box">
+    <button class="copy mono" id="copy-bib" type="button">copy</button>
+    <pre class="mono" id="bib-text"></pre>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>PreciseCoder · Rewards Beyond Test Passing</p>
+</footer>
+
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="assets/main.js?v=202610070200"></script>
+<script defer src="assets/figure-data.js?v=202610070200"></script>
+<script defer src="assets/charts.js?v=202610070200"></script>
+</body>
+</html>

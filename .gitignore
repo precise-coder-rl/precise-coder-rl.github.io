@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# local tooling
+.claude/
+
+# The submission PDFs carry the "under review" header; keep them out of the public repo.
+# (tools/extract_figure_data.py still reads it locally.)
+PreciseCoder_Final.pdf
+main.pdf
