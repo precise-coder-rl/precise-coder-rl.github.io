@@ -225,7 +225,7 @@ const W2S = [
   { name: "DeepSeek-V4.1-Flash", note: "continues thinking", pass: -1.5, prec: 5.5 },
   { name: "Qwen3.8-Max", note: "trace in user turn", pass: -0.7, prec: 12.4 },
   { name: "GPT-5.6 Sol (high)", note: "trace in user turn", pass: 1.2, prec: 4.6 },
-  { name: "Qwen3.6-27B", note: "control: untrained 9B trace", pass: -7.4, prec: 2.6 },
+  { name: "Qwen3.6-27B", note: "control: untrained 9B trace", pass: -7.4, prec: 2.6, control: true },
 ];
 function renderW2S() {
   const MIN = -9, MAX = 19, span = MAX - MIN;
@@ -240,7 +240,7 @@ function renderW2S() {
   };
   const el = document.getElementById("w2s-chart");
   el.innerHTML = `<div class="w2s-legend"><span><i style="background:var(--blue)"></i>Δ edit precision</span><span><i style="background:var(--ink-3)"></i>Δ pass rate</span><span style="color:var(--ink-3)">points vs. receiver's own reasoning</span></div>` +
-    W2S.map(r => `<div class="w2s-row"><div class="name">${r.name}<small>${r.note}</small></div><div class="tracks">${bar(r.prec, "prec")}${bar(r.pass, "pass")}</div></div>`).join("");
+    W2S.map(r => `<div class="w2s-row${r.control ? " control" : ""}"><div class="name">${r.name}<small>${r.note}</small></div><div class="tracks">${bar(r.prec, "prec")}${bar(r.pass, "pass")}</div></div>`).join("");
 }
 function growW2S() {
   document.querySelectorAll("#w2s-chart .b").forEach(b => { b.style.width = b.dataset.w + "%"; });

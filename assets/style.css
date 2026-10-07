@@ -409,6 +409,11 @@ table.res { width: 100%; border-collapse: collapse; font-size: 14.5px; font-vari
 .w2s-track .b.prec { background: var(--blue); }
 .w2s-track .b.pass { background: var(--ink-3); opacity: .75; }
 .w2s-track .v { position: absolute; top: -1px; font: 500 11px/14px var(--mono); color: var(--ink-2); white-space: nowrap; }
+.w2s-row.control { margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+.w2s-row.control .name, .w2s-row.control .name small { color: var(--del); }
+.w2s-row.control .b.prec, .w2s-row.control .b.pass { background: var(--del); }
+.w2s-row.control .b.pass { opacity: .55; }
+.w2s-row.control .v { color: var(--del); }
 
 /* ============ Thinking ============ */
 .bigrams { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; background: var(--card); }
