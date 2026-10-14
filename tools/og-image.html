@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex" />
+  <title>PreciseCoder link preview</title>
+  <!-- Draws assets/og-image.png, the image link previews show. See README → Link preview. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/style.css" />
+  <style>
+    html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; background: var(--card); }
+    .og { box-sizing: border-box; width: 1200px; height: 630px; padding: 44px 64px 34px; display: flex; flex-direction: column; text-align: center; }
+    .og h1 { margin: 0; font: 700 60px/1.1 var(--sans); letter-spacing: -.015em; color: var(--blue); }
+    .og .lead { margin: 12px 0 0; font-size: 23px; color: var(--ink-2); }
+    .modes { margin-top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: left; }
+    .modes h2 { margin: 0; font: 700 28px/1.2 var(--sans); color: var(--ink); }
+    .modes .what { margin: 6px 0 14px; font-size: 18px; color: var(--ink-2); }
+    .modes .after { margin: 12px 0 0; font-size: 18px; color: var(--ink-2); }
+    .og .pane { box-shadow: none; }
+    .og .pane-head { font-size: 15px; padding: 9px 14px; }
+    .og .code { min-height: 0; font-size: 17px; line-height: 1.65; padding: 8px 0; }
+    .og .code .ln .no { width: 42px; }
+    .og .code .ln .sig { width: 18px; }
+    .og .code .tag { font-size: 14px; padding-right: 4px; }
+    /* green marks the real fix, red the edits that should not have happened */
+    .og .code .ln.fix { background: color-mix(in srgb, var(--ins) 12%, var(--card)); }
+    .og .code .ln.extra, .og .code .ln.bad { background: color-mix(in srgb, var(--del) 12%, var(--card)); }
+    .og .code .ln.extra .sig, .og .code .ln.extra .no, .og .code .extra .tag,
+    .og .code .ln.bad .sig, .og .code .ln.bad .no, .og .code .bad .tag { color: var(--del); }
+    .og .site { margin-top: auto; font-size: 18px; color: var(--ink-3); }
+    .og .site b { font-weight: 600; color: var(--ink-2); }
+  </style>
+</head>
+<body>
+  <div class="og">
+    <h1>PreciseCoder</h1>
+    <p class="lead">We fix the two failure modes that unit-test rewards teach code models.</p>
+    <div class="modes">
+      <section>
+        <h2>Over-editing</h2>
+        <p class="what">Fixing one bug, it also rewrites code that worked.</p>
+        <figure class="pane">
+          <figcaption class="pane-head mono"><span class="dot"></span>unit-test GRPO · buggy program</figcaption>
+          <pre class="code" data-case="overedit"></pre>
+        </figure>
+        <p class="after">Tests pass, with 7 edits where 1 was needed.</p>
+      </section>
+      <section>
+        <h2>Bug hallucination</h2>
+        <p class="what">Given correct code, it “fixes” a bug that isn't there.</p>
+        <figure class="pane">
+          <figcaption class="pane-head mono"><span class="dot"></span>unit-test GRPO · correct program</figcaption>
+          <pre class="code" data-case="halluc"></pre>
+        </figure>
+        <p class="after">The “fix” makes correct code fail its tests.</p>
+      </section>
+    </div>
+    <div class="site"><b>precise-coder-rl.github.io</b> · arXiv:2610.18755</div>
+  </div>
+
+  <script>
+    // The examples are the page's Figure 1(a) demo (CASES in assets/main.js), read from the real page.
+    const page = document.createElement("iframe");
+    page.hidden = true;
+    page.addEventListener("load", () => {
+      // Top-level consts in main.js aren't window properties; read them in the frame's global scope.
+      const { CASES, lineHTML } = page.contentWindow.eval("({ CASES, lineHTML })");
+      document.querySelectorAll(".code[data-case]").forEach(pre => {
+        pre.innerHTML = CASES[pre.dataset.case].grpo.lines.slice(-5).map(lineHTML).join(""); // same height on both sides
+      });
+    });
+    page.src = "../index.html";
+    document.body.append(page);
+  </script>
+</body>
+</html>
